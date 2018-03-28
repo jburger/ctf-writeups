@@ -15,6 +15,11 @@ First up, we'll just get the flag really quickly using a debugger.
 
 Then we'll move on to exploiting a vulnerability in the code such that we can get the flag without the aid of the debugger.
 
+### Video
+
+If you're into that kind of thing...
+https://youtu.be/eFlXpYmOErk
+
 ## Tools
 
 To follow along here you'll want:
