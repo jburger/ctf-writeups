@@ -149,7 +149,7 @@ While it is unlikely to be a 'real world' situation doing this, it is still inst
 
 The [ret instruction](http://www.felixcloutier.com/x86/RET.html) expects to take value at the top of the stack (pointed to by the stack pointer), and loads it into the instruction pointer, thus making that value, the next program instruction location. 
 
-![Using radare2 debugger in visual mode to show the operation of the AskQuestion function](https://github.com/jburger/ctf-writeups-2018/blob/master/images/r2-ask-question.png)
+![Using radare2 debugger in visual mode to show the operation of the AskQuestion function](../../images/r2-ask-question.png)
 
 Since (with ASLR off), we can know the runtime memory address of the ShowFlag function, all we need to do is place that memory address at the top of the stack, at the time the program crashes.
 
