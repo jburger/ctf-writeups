@@ -130,7 +130,7 @@ By hooking the debugger we can see that the program flow is interrupted by the s
 
 I did attempt to exploit the buffer overflow without turning off ASLR, but was unable to find a way to do so. I couldn't find a way to ret2plt or ret2libc (not that I'm skilled at doing so) on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly. 
 
-The closest I got was realising that I could 'workaround' ASLR by reading the processes maps file (in /proc/<pid>/maps) to determine the memory location of the binary itself. 
+The closest I got was realising that I could 'workaround' ASLR by reading the processes maps file (in /proc/{pid}/maps) to determine the memory location of the binary itself. 
 
 For now though, to check that ASLR is off use
 ```
@@ -224,7 +224,7 @@ Bus error
 
 The following isn't exactly an ASLR defeat, however it may provide a workaround for a user with insufficient privilege to turn ASLR completely off. 
 
-In our environment (Linux, x64) each process that gets created on our system writes a memory map to /proc/<pid>/maps, and the contents of a typical map file shows the memory locations like this:
+In our environment (Linux, x64) each process that gets created on our system writes a memory map to /proc/{pid}/maps, and the contents of a typical map file shows the memory locations like this:
 	
 ```
 # cat /proc/<pid>/maps
