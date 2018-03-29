@@ -220,9 +220,9 @@ Bus error
 
 ```
 
-### Working around ASLR 
+### Working around ASLR & PIE
 
-The following isn't exactly an ASLR defeat, however it may provide a workaround for a user with insufficient privilege to turn ASLR completely off. 
+The following isn't exactly an ASLR / PIE defeat, however it may provide a workaround for a user with insufficient privilege to turn ASLR completely off. I came across this information when studying the [this BH'16 presentation (PDF)](https://www.blackhat.com/docs/asia-16/materials/asia-16-Marco-Gisbert-Exploiting-Linux-And-PaX-ASLRS-Weaknesses-On-32-And-64-Bit-Systems.pdf) Unfortunately, I couldn't quite figure out how to 'offset2libc' - I'm not sure if it is possible or not.
 
 In our environment (Linux, x64) each process that gets created on our system writes a memory map to /proc/{pid}/maps, and the contents of a typical map file shows the memory locations like this:
 	
@@ -247,11 +247,11 @@ In our environment (Linux, x64) each process that gets created on our system wri
 7ffd9e58c000-7ffd9e58e000 r-xp 00000000 00:00 0                          [vdso]
 ```
 
-Each portion of the binary is in a random location. Again, using automation it is possible to read this at runtime (from a low privileged account)
+Each portion of the binary is in a random location. The PIE flag also allows the libc and ld (linker) references to be randomized also. Again, using automation it is possible to read this at runtime (from a low privileged account)
 
 However, because only certain parts of the binary's memory location are randomized, we can trust that the ShowFlag always sits at the same _offset_
 
-In the previous example we saw that the last few higher order bits in the ShowFlag memory location were '796'
+In the previous example we saw that the 3 lowest order bits in the ShowFlag memory location were '796'. This is always the case, no matter what the execution protection is doing.
 
 So, we can leverage the maps file to do the following:
 
