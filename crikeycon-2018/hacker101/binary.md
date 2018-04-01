@@ -23,8 +23,9 @@ Along the way I learned a _tonne_ of things so I'll try to summarize:
 4. Turning ASLR on and off
 5. Different kinds of binary protection mechanisms provided in Linux
 6. Partial instruction pointer overwrites
-7. ASLR bruteforcing 64bit things
-8. That persistence solves problems
+7. use of OS memory maps, where available, to workaround ASLR
+8. ASLR bruteforcing 64bit things
+9. That persistence solves problems =D
 
 For a visual run through of the following I've uploaded a video
 
