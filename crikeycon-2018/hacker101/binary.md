@@ -1,7 +1,7 @@
 # Crikey Con 2018 CTF
 ## Points: 100
 ### Location: https://crikeyconctf.dook.biz/challenges#Binary
-#### Last updated March 25 2018
+#### Last updated April 4 2018
 
 This is a fun little binary exploitation exercise for noobs like me. 
 
@@ -29,7 +29,7 @@ Along the way I learned a _tonne_ of things so I'll try to summarize:
 
 For a visual run through of the following I've uploaded a video
 
-[![binary ctf aslr bruteforce 64bit - spoiler](https://i9.ytimg.com/vi/rz-3hnUiArE/default.jpg?v=5ac0ef30&sqp=COzBhdYF&rs=AOn4CLA8k-oncmO0hxBVisksuuoQJpvZvg)](https://youtu.be/rz-3hnUiArE)
+[![binary ctf aslr bruteforce 64bit - spoiler](https://www.youtube.com/upload_thumbnail?v=OgMGPxl2fUQ&t=hqdefault&ts=1522764987327)](https://www.youtube.com/watch?v=OgMGPxl2fUQ)
 
 ## Tools
 
