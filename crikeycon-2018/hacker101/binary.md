@@ -144,9 +144,9 @@ By hooking the debugger we can see that the program flow is interrupted by the s
 
 ### Turning off ASLR
 
-I did attempt to exploit the buffer overflow without turning off ASLR using ret2plt or ret2libc (not that I'm skilled at doing so), however I was not able to do so.  I think this is on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly. 
+I did attempt to exploit the buffer overflow using ret2plt or ret2libc (not that I'm skilled at doing so), however I was not able to get a memory leak.  I think this is on account of this assembly being Position Independent, thereby randomizing the location of .bss, .plt & .got sections of the assembly, as well as being really simple, with few places to cause a location leak. This doesn't mean it can't be done, just htat I was not able to get it done.
 
-The closest I got was realising that I could 'bruteforce' ASLR by reducing the potential places in memory to look for the ShowFlag function.
+The closest I got was realising that I could 'bruteforce' ASLR by reducing the potential places in memory to look for the ShowFlag function. More on that later.
 
 For now though, to show the basic technique, I'll turn ASLR off:
 ```
@@ -303,7 +303,7 @@ proc.interactive()
 ### Q: What if we can't read /proc/$pid/maps ?
 
 
-#### A: Bruteforce and a partial IP overwrite
+#### A: Bruteforce and a partial IP overwrite!
 The answer to this question was elusive to me, as my first instinct was to attempt a brute force attack on the entire memory space. Unfortunately it was like trying to find a needle in a haystack, where each time you go looking for the needle, the entire haystack rearranges itself. I set up my loop overnight, ignoring the math, and hoping, but all it did was warmup my laptop.
 
 After trying, giving up, and trying again, I learned about a thing called a ['partial EIP overwrite'](http://ly0n.me/2015/07/30/bypass-aslr-with-partial-eip-overwrite/) whereby it is possible in some scenario's to only write over the last few lower order bytes in the instruction pointer. This meant that the higher order bytes would remain, and if you were lucky, the small amount of address space that you could call would yield something useful.
