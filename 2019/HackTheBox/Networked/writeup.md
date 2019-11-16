@@ -185,7 +185,7 @@ guly ALL=NOPASSWD: /usr/local/sbin/changename.sh
 # Wrapping it up: What can we learn from this box?
 
 - Keep your source code backups in a safe place. Just because there are no hyperlinks does not mean it will not be found.
-- Watch out for custom Apache configurations, the default configuration would have prevented the MIMEtype issue
+- Watch out for custom Apache configurations, the default configuration would have prevented the MIME type issue
 - If possible, use immutable infrastructure or remote administration technologies to run scripts against production, instead of making a home for a user to run some scripts
 - If you do need to leave scripts lying around on a system (jobs etc) analyze them carefully for local privilege escalation and command injection flaws
 - Probably not a great idea using passwordless sudo if you can help it
