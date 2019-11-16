@@ -1,8 +1,6 @@
 # Hack the box writeup: Networked
 
-|||
-|:---|---:|
-|**TL;DR**|Enumerate web application to gain source code access, foothold via image upload vulnerability, privesc from web app user to root via different command injection techniques|
+> **TL;DR** Enumerate web application to gain source code access, foothold via image upload vulnerability, privesc from web app user to root via different command injection techniques
 
 ![networked](networked.png)
 
@@ -16,10 +14,9 @@ nmap 10.10.10.146 -sV -p22,80,443
 
 The `-sV` option enables service detection, which fingerprints the returns from these ports, revealing I was possibly dealing with a LAMP stack on centOS.
 
-The home page looked pretty basic so I fired off  a few cheap shots (directory traversal, command injection) but nothing indicated success.
 ![port80](port80.png)
 
-A quick look at the source code indicated that the upload and gallery pages existed, but weren't linked yet:
+The home page looked pretty basic so I fired off a few cheap shots (directory traversal, command injection) but nothing indicated success. A quick look at the source code indicated that the upload and gallery pages existed, but weren't linked yet:
 
 ```
 <!-- upload and gallery not yet linked -->
