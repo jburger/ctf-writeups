@@ -1,4 +1,4 @@
-# ctf-writeups-2018
-challenge writeups from 2018
+# ctf-writeups
+challenge writeups from various places at various times
 
 WARNING: contains spoilers, don't read unless you want answers
